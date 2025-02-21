@@ -1,6 +1,125 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
+import { useEffect } from "react";
 
 export default function Home() {
+  const [selectedValue, setSelectedValue] = useState("metric");
+  const [inches, setInches] = useState("");
+  const [feet, setFeet] = useState("");
+  const [stones, setStones] = useState("");
+  const [lbs, setLbs] = useState("");
+  const [kgs, setKgs] = useState("");
+  const [cm, setCm] = useState("");
+  const [bmiiMetric, setBmiiMetric] = useState(0);
+  const [bmiiImperial, setBmiiImperial] = useState(0);
+
+  useEffect(() => {
+    const calculateBMI = () => {
+      let calculatedBMI;
+      if (selectedValue === "metric") {
+        const weight = parseFloat(kgs);
+        const height = parseFloat(cm);
+        if (isNaN(weight) || isNaN(height) || weight <= 0 || height <= 0) {
+          return;
+        }
+        const heightInMeters = height / 100;
+        calculatedBMI = weight / (heightInMeters * heightInMeters);
+        setBmiiMetric(calculatedBMI.toFixed(1));
+      } else {
+        console.log("Using imperial system");
+
+        const feetToInches = parseFloat(feet) * 12 || 0;
+        const inchesValue = parseFloat(inches) || 0;
+        const heightInInches = feetToInches + inchesValue;
+
+        const stonesToLbs = parseFloat(stones) * 14 || 0;
+        const weightInLbs = stonesToLbs + (parseFloat(lbs) || 0);
+
+        if (
+          isNaN(heightInInches) ||
+          isNaN(weightInLbs) ||
+          heightInInches <= 0 ||
+          weightInLbs <= 0
+        ) {
+          console.log("Invalid input, stopping calculation.");
+          return;
+        }
+
+        calculatedBMI = (703 * weightInLbs) / (heightInInches * heightInInches);
+        console.log("Calculated BMI (Imperial):", calculatedBMI);
+        setBmiiImperial(calculatedBMI.toFixed(1));
+      }
+    };
+
+    if ((kgs && cm) || (inches && feet && stones && lbs)) {
+      calculateBMI();
+    }
+  }, [kgs, cm, inches, feet, stones, lbs, selectedValue]);
+
+  const calculateIdealWeight = () => {
+    if (selectedValue === "metric" && !isNaN(parseFloat(cm))) {
+      return {
+        min: (18.5 * (parseFloat(cm) / 100) ** 2).toFixed(1),
+        max: (24.9 * (parseFloat(cm) / 100) ** 2).toFixed(1),
+      };
+    } else if (!isNaN(parseFloat(inches)) && !isNaN(parseFloat(feet))) {
+      const heightInInches = parseFloat(inches) + parseFloat(feet) * 12;
+      return {
+        min: ((18.5 * heightInInches ** 2) / 703).toFixed(1),
+        max: ((24.9 * heightInInches ** 2) / 703).toFixed(1),
+      };
+    }
+    return { min: "0", max: "0" };
+  };
+
+  const handleInputChange = (setter) => (e) => {
+    setter(e.target.value);
+  };
+
+  const handleRadioChange = (value) => {
+    setSelectedValue(value);
+  };
+
+  const idealWeights = calculateIdealWeight();
+
+  const calculateBmiCategory = () => {
+    if (selectedValue === "metric") {
+      if (bmiiMetric >= 40) {
+        return "obese";
+      }
+      if (bmiiMetric >= 25) {
+        return "overweight";
+      }
+      if (bmiiMetric >= 18.5) {
+        return "a normal weight";
+      } else {
+        return "underweight";
+      }
+    } else {
+      if (bmiiImperial >= 40) {
+        return "obese";
+      }
+      if (bmiiImperial >= 25) {
+        return "overweight";
+      }
+      if (bmiiImperial >= 18.5) {
+        return "a normal weight";
+      } else {
+        return "underweight";
+      }
+    }
+  };
+  const calculatedBmiCategory = calculateBmiCategory();
+  useEffect(() => {
+    console.log("BMI Metric State (useEffect):", bmiiMetric);
+  }, [bmiiMetric]);
+
+  useEffect(() => {
+    console.log("BMI Imperial State (useEffect):", bmiiImperial);
+  }, [bmiiImperial]);
+
   return (
     <div className="font-[family-name:var(--font-inter)]">
       <header className=" bg-white h-[75rem] md:h-[60rem] xl:h-[46rem]">
@@ -21,14 +140,29 @@ export default function Home() {
             determinant of a healthy weight, it offers a valuable starting point
             to evaluate your overall health and well-being.
           </p>
-          <div className="form-container w-[87%] md:w-[90%] xl:w-[56%] h-fit rounded-xl bg-white shadow-lg absolute -bottom-[500px] md:-bottom-[200px] xl:bottom-[121px] xl:left-[736px] p-6">
+          <div
+            className={
+              selectedValue === "metric"
+                ? "form-container w-[87%] md:w-[90%] xl:w-[56%] h-fit rounded-xl bg-white shadow-lg absolute -bottom-[500px] md:-bottom-[200px] xl:top-[146px] xl:left-[736px] p-6"
+                : "form-container w-[87%] md:w-[90%] xl:w-[56%] h-fit rounded-xl bg-white shadow-lg absolute -bottom-[500px] md:-bottom-[200px] xl:top-[146px] xl:left-[736px] p-6"
+            }
+          >
             <h3 className="text-2xl text-blue900 font-semibold">
               Enter your details below
             </h3>
             <form className="" action="">
-              <div className="radio-inputs flex justify-between md:gap-6 mt-6">
-                <div className="w-1/2">
-                  <input type="radio" name="unit" id="metric" />
+              <div className="radio-inputs flex justify-between  md:gap-6 mt-6">
+                <div className="w-1/2 flex items-center">
+                  <input
+                    className="appearance-none border-2 border-grey500 w-8 h-8 rounded-full checked:border-0 checked:bg-blue100 relative peer"
+                    type="radio"
+                    name="unit"
+                    id="metric"
+                    value="metric"
+                    checked={selectedValue === "metric"}
+                    onChange={() => handleRadioChange("metric")}
+                  />
+                  <div className="absolute w-4 h-4 rounded-full peer-checked:bg-blue-500 ml-2 pointer-events-none" />
                   <label
                     className="ml-4 text-blue900 font-semibold"
                     htmlFor="metric"
@@ -36,8 +170,17 @@ export default function Home() {
                     Metric
                   </label>
                 </div>
-                <div className="w-1/2">
-                  <input className="" type="radio" name="unit" id="imperial" />
+                <div className="w-1/2 flex items-center">
+                  <input
+                    className="appearance-none border-2 border-grey500 w-8 h-8 rounded-full checked:border-0 checked:bg-blue100 relative peer"
+                    type="radio"
+                    name="unit"
+                    id="imperial"
+                    value="imperial"
+                    checked={selectedValue === "imperial"}
+                    onChange={() => handleRadioChange("imperial")}
+                  />
+                  <div className="absolute w-4 h-4 rounded-full peer-checked:bg-blue-500 ml-2 pointer-events-none" />
                   <label
                     className="ml-4 text-blue900 font-semibold"
                     htmlFor="imperial"
@@ -46,49 +189,129 @@ export default function Home() {
                   </label>
                 </div>
               </div>
-              <div className="forms flex flex-col md:flex-row gap-4 md:gap-6 mt-6 w-full ">
-                <div className="height flex flex-col text-grey500 text-[0.875rem] relative md:w-1/2  ">
-                  <label htmlFor="height">Height</label>
-                  <input
-                    className="h-[77px] border border-grey500 rounded-xl text-blue900 text-2xl font-semibold pl-6 mt-2 w-full"
-                    type="text"
-                    name=""
-                    id="height"
-                  />
-                  <span className="text-2xl text-blue500 font-semibold absolute bottom-[24px] right-[24px]">
-                    cm
-                  </span>
+              {selectedValue === "metric" ? (
+                <div className="forms-metric flex flex-col md:flex-row gap-4 md:gap-6 mt-6 w-full">
+                  <div className="height-metric flex flex-col text-grey500 text-[0.875rem] relative md:w-1/2  ">
+                    <label htmlFor="height">Height</label>
+                    <input
+                      className="h-[77px] border border-grey500 rounded-xl text-grey500 text-2xl font-semibold pl-6 mt-2 w-full"
+                      type="number"
+                      name="heightCm"
+                      id="height"
+                      placeholder="0"
+                      value={cm}
+                      onChange={handleInputChange(setCm)}
+                    />
+                    <span className="text-2xl text-blue500 font-semibold absolute bottom-[24px] right-[24px]">
+                      cm
+                    </span>
+                  </div>
+                  <div className="weight-metric  flex flex-col text-grey500 text-[0.875rem] relative  md:w-1/2 ">
+                    <label htmlFor="weight">Weight</label>
+                    <input
+                      className="h-[77px] border border-grey500 rounded-xl text-grey500 text-2xl font-semibold pl-6 mt-2 w-full"
+                      type="number"
+                      name="weightKgs"
+                      id="weight"
+                      placeholder="0"
+                      value={kgs}
+                      onChange={handleInputChange(setKgs)}
+                    />
+                    <span className="text-2xl text-blue500 font-semibold absolute bottom-[24px] right-[24px]">
+                      kg
+                    </span>
+                  </div>
                 </div>
-                <div className="weight  flex flex-col text-grey500 text-[0.875rem] relative  md:w-1/2 ">
-                  <label htmlFor="weight">Weight</label>
-                  <input
-                    className="h-[77px] border border-grey500 rounded-xl text-blue900 text-2xl font-semibold pl-6 mt-2 w-full"
-                    type="text"
-                    name=""
-                    id="weight"
-                  />
-                  <span className="text-2xl text-blue500 font-semibold absolute bottom-[24px] right-[24px]">
-                    kg
-                  </span>
+              ) : (
+                <div className="forms-imperial flex flex-col  gap-4 md:gap-6 mt-6 w-full">
+                  <div className="height-imperial flex flex-col text-grey500 text-[0.875rem] relative md:w-full  ">
+                    <label htmlFor="height">Height</label>
+                    <div className="inputs-container flex gap-4 relative">
+                      <div className="ft-container relative w-1/2">
+                        <input
+                          className="h-[77px] border border-grey500 rounded-xl text-grey500 text-2xl font-semibold pl-6 mt-2 w-full relative"
+                          type="number"
+                          name="heightFt"
+                          id="height"
+                          placeholder="0"
+                          value={feet}
+                          onChange={handleInputChange(setFeet)}
+                        />
+                        <span className="text-2xl text-blue500 font-semibold absolute bottom-[24px] right-6">
+                          ft
+                        </span>
+                      </div>
+                      <input
+                        className="h-[77px] border border-grey500 rounded-xl text-grey500 text-2xl font-semibold pl-6 mt-2 w-1/2"
+                        type="number"
+                        name="heightInches"
+                        id="height"
+                        placeholder="0"
+                        value={inches}
+                        onChange={handleInputChange(setInches)}
+                      />
+                    </div>
+                    <span className="text-2xl text-blue500 font-semibold absolute bottom-[24px] right-[24px]">
+                      in
+                    </span>
+                  </div>
+                  <div className="weight-imperial flex flex-col text-grey500 text-[0.875rem] relative md:w-full  ">
+                    <label htmlFor="weight">Weight</label>
+                    <div className="inputs-container flex gap-4 relative">
+                      <div className="ft-container relative w-1/2">
+                        <input
+                          className="h-[77px] border border-grey500 rounded-xl text-grey500 text-2xl font-semibold pl-6 mt-2 w-full relative"
+                          type="number"
+                          name="weightSt"
+                          id="weight"
+                          placeholder="0"
+                          value={stones}
+                          onChange={handleInputChange(setStones)}
+                        />
+                        <span className="text-2xl text-blue500 font-semibold absolute bottom-[24px] right-6">
+                          st
+                        </span>
+                      </div>
+                      <input
+                        className="h-[77px] border border-grey500 rounded-xl text-grey500 text-2xl font-semibold pl-6 mt-2 w-1/2"
+                        type="number"
+                        name="weightLbs"
+                        id="weight"
+                        placeholder="0"
+                        value={lbs}
+                        onChange={handleInputChange(setLbs)}
+                      />
+                    </div>
+                    <span className="text-2xl text-blue500 font-semibold absolute bottom-[24px] right-[24px]">
+                      lbs
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="results bg-blue500 text-white p-8 mt-6 rounded-2xl flex flex-col md:flex-row md:justify-between md:rounded-l-xl md:rounded-r-full">
                 <div className="bmi md:flex md:flex-col md:justify-between">
                   <p className="font-semibold">Your BMI is...</p>
-                  <span className="bmi text-5xl font-semibold mt-2 ">23.4</span>
+                  <span className="bmi text-5xl font-semibold mt-2 ">
+                    {selectedValue === "metric"
+                      ? bmiiMetric || "0"
+                      : bmiiImperial || "0"}
+                  </span>
                 </div>
                 <div className="results-p">
                   <p className="text-[0.875rem] mt-6 md:mt-1">
                     Your BMI suggests you&apos;re
                   </p>
                   <span className="classification text-[0.875rem]">
-                    a healthy weight
+                    {calculatedBmiCategory}
                   </span>
                   <p className="text-[0.875rem]">
-                    Your ideal weight is between{" "}
+                    Your ideal weight is between
                   </p>
                   <span className="range text-[0.875rem] font-bold">
-                    63.3kgs - 74.5kgs.
+                    {idealWeights.min}
+                    {selectedValue === "metric" ? " kgs " : " lbs "} and
+                    {" " + idealWeights.max}
+                    {selectedValue === "metric" ? " kgs" : " lbs"}.
                   </span>
                 </div>
               </div>
